@@ -1,81 +1,65 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React from "react";
+import useWeather from "./hooks/useWeather";
+import Loader from "./components/Loader";
+import { toast } from "react-toastify";
 
 const Weather = () => {
-  const [weatherData, setWeatherData] = useState(null); // State for current weather data
-  const [forecastData, setForecastData] = useState(null); // State for 5-day forecast data
-  const [error, setError] = useState(null); // State for error handling
-  const [loading, setLoading] = useState(true); // State for loading state
-  const city = "Benin City"; // You can change the city here
+  const city = "Benin City";
+  const { data, loading, error } = useWeather(city);
 
-  // Fetch current weather data
-  useEffect(() => {
-    const fetchWeather = async () => {
-      try {
-        const response = await axios.get(
-          `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${process.env.REACT_APP_WEATHER_API_KEY}&units=metric`
-        );
-        setWeatherData(response.data); // Store current weather data
-      } catch (err) {
-        setError("Error fetching current weather data");
-      } finally {
-        setLoading(false); // Set loading to false after data is fetched
-      }
-    };
+  if (loading) return <Loader />;
+  // if (error) return <div>{error}</div>;
+  if (error) {
+    toast.error(error);
+    return null; // Prevent crashing render after toast
+  }
 
-    fetchWeather();
-  }, [city]); // Dependency array ensures this runs when city changes
-
-  // Fetch 5-day weather forecast
-  useEffect(() => {
-    const fetchForecast = async () => {
-      try {
-        const response = await axios.get(
-          `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${process.env.REACT_APP_WEATHER_API_KEY}&units=metric`
-        );
-        setForecastData(response.data); // Store 5-day forecast data
-      } catch (err) {
-        setError("Error fetching 5-day forecast data");
-      }
-    };
-
-    fetchForecast();
-  }, [city]); // Dependency array ensures this runs when city changes
-
-  if (loading) return <div>Loading...</div>; // Show loading message while data is being fetched
-  if (error) return <div>{error}</div>; // Show error message if there is an issue fetching data
+  const { weather, forecast } = data;
 
   return (
-    <div>
-      <h1>{weatherData.name}</h1>
-      <p>{weatherData.main.temp}°C</p>
+    <div style={{ textAlign: "center", padding: "2rem" }}>
+      {/* Current Weather */}
+      <h1>{weather.name}</h1>
+      <p style={{ fontSize: "2rem" }}>{weather.main.temp}°C</p>
       <img
-        src={`http://openweathermap.org/img/wn/${weatherData.weather[0].icon}.png`}
+        src={`http://openweathermap.org/img/wn/${weather.weather[0].icon}@2x.png`}
         alt="Weather icon"
+        style={{ width: "100px" }}
       />
-      <p>{weatherData.weather[0].description}</p>
+      <p style={{ textTransform: "capitalize" }}>
+        {weather.weather[0].description}
+      </p>
 
-      <h2>5-Day Forecast</h2>
-      <div style={{ display: "flex", flexDirection: "row" }}>
-        {forecastData &&
-          forecastData.list &&
-          forecastData.list.map((forecast, index) => {
-            // Render a forecast for every 8 hours, so we pick every 8th item (assuming data is returned every 3 hours)
-            if (index % 8 === 0) {
-              return (
-                <div key={index} style={{ margin: "0 10px" }}>
-                  <h3>{new Date(forecast.dt * 1000).toLocaleDateString()}</h3>
-                  <p>{forecast.main.temp}°C</p>
-                  <img
-                    src={`http://openweathermap.org/img/wn/${forecast.weather[0].icon}.png`}
-                    alt="Forecast icon"
-                  />
-                  <p>{forecast.weather[0].description}</p>
-                </div>
-              );
-            }
-            return null;
-          })}
+      {/* 5-Day Forecast */}
+      <h2 style={{ marginTop: "2rem" }}>5-Day Forecast</h2>
+      <div
+        style={{ display: "flex", justifyContent: "center", flexWrap: "wrap" }}
+      >
+        {forecast.list.map(
+          (item, index) =>
+            index % 8 === 0 && (
+              <div
+                key={index}
+                style={{
+                  margin: "10px",
+                  padding: "10px",
+                  border: "1px solid #ccc",
+                  borderRadius: "8px",
+                  width: "120px",
+                }}
+              >
+                <h4>{new Date(item.dt * 1000).toLocaleDateString()}</h4>
+                <img
+                  src={`http://openweathermap.org/img/wn/${item.weather[0].icon}.png`}
+                  alt="Forecast icon"
+                />
+                <p style={{ margin: "5px 0" }}>{item.main.temp}°C</p>
+                <p style={{ fontSize: "0.8rem", textTransform: "capitalize" }}>
+                  {item.weather[0].description}
+                </p>
+              </div>
+            )
+        )}
       </div>
     </div>
   );
